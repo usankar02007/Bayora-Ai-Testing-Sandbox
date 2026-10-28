@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: bayora-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+      POSTGRES_DB: bayora
+    ports:
+      - "5432:5432"
+    volumes:
+      - bayora_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bayora"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bayora-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/bayora
+      - RED_TEAM_TOKEN=xND5AvvnefHCn-2HRVTqvREQDgEVV6xwRD3Wi65-2D4
+      - BLUE_TEAM_TOKEN=kFruB6iC7KHtK3fzyu428TYQXMiYAnImXImBqQCSVf0
+      - ADMIN_TOKEN=XfPyOmrpzuCLOETNyVg3OnoiOgYwLwpUTztjnzs9YUA
+      - ALLOW_REMOTE_MODELS=false
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bayora-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  bayora_pg_data:
